@@ -4,17 +4,36 @@ const fs = require('fs'),
 const readFile = util.promisify(fs.readFile);
 
 
-enum State {
-  Null = 0,
-  ParenOpen = 1,
-  ParenClose = 2,
-  Operator = 4,
-  Number = 5,
-  Letter = 6
+enum Token {
+  Unknown = 'UNKNOWN',
+  Null = 'NULL',
+  ParenOpen = 'PAREN_OPEN',
+  ParenClose = 'PAREN_CLOSE',
+  Whitespace = 'WHITESPACE',
+  Operator = 'OPERATOR',
+  Number = 'NUMBER',
+  Letter = 'LETTER',
+}
+
+enum SymbolType {
+  Function = 'FUNCTION',
+  FunctionDeclaration = 'FUNCTION_DECLARATION',
+}
+
+
+interface Symbol {
+  type: SymbolType;
+  value: string;
+}
+
+const NoTokenMatch = [0, Token.Null] as [number, Token];
+
+const isWhitespace = (c: string) => {
+  return [' ', '\t', '\n', '\r'].indexOf(c) >= 0;
 }
 
 const isOperator = (c: string) => {
-  return ['*', 'x', '+', '-'].indexOf(c) >= 0;
+  return ['*', '/', '+', '-'].indexOf(c) >= 0;
 }
 
 const isNumber = (c: string) => {
@@ -25,62 +44,52 @@ const isLetter = (c: string) => {
   return c.toLowerCase() !== c.toUpperCase();
 }
 
-const advance = (newState: State, index: number, amount: number) => {
-  return [index + amount, newState];
+const advance = (newToken: Token, index: number, amount: number): [number, Token] => {
+  return [index + amount, newToken];
 }
 
 const interp = (_program: any) => {
 };
 
-const consumers = [
-  (i, c) => c === '('     ? advance(State.ParenOpen, i, 1) : null,
-  (i, c) => c === ')'     ? advance(State.ParenClose, i, 1) : null,
-  (i, c) => isOperator(c) ? advance(State.Operator, i, 1) : null,
-  (i, c) => isLetter(c) ? advance(State.Letter, i, 1) : null,
-  (i, c) => isNumber(c) ? advance(State.Number, i, 1) : null
-]
-
-const consume = ([i, newState, oldState]: [number, number, number]) => {
-  if (newState != oldState) {
-    // console.log('State change', i, `${oldState} -> ${newState}`);
-  }
-
-  return [i, newState];
-}
+const tokenizers = [
+  (i, c) => c === '('         ? advance(Token.ParenOpen, i, 1) : NoTokenMatch,
+  (i, c) => c === ')'         ? advance(Token.ParenClose, i, 1) : NoTokenMatch,
+  (i, c) => isWhitespace(c)   ? advance(Token.Whitespace, i, 1) : NoTokenMatch,
+  (i, c) => isOperator(c)     ? advance(Token.Operator, i, 1) : NoTokenMatch,
+  (i, c) => isLetter(c)       ? advance(Token.Letter, i, 1) : NoTokenMatch,
+  (i, c) => isNumber(c)       ? advance(Token.Number, i, 1) : NoTokenMatch,
+  (i, _c) => advance(Token.Unknown, i, 1)
+];
 
 
-const parse = (program: string) => {
-  // let len = program.length;
+// Convert a program string into a stream of tokens
+const tokenize = (program: string) => {
   let i = 0;
+  let newI;
+  let token = Token.Null;
   let c = program[0];
-  let ast = {};
-  // let sym = null;
-  let state = State.Null;
-
-  // console.log(c);
+  const tokens = [];
 
   while (c) {
-    let result;
-    process.stdout.write(c);
-    // console.log(i);
-    for (let op of consumers) {
-      result = op(i, c);
-      if (result) {
-        [i, state] = consume([...result, state] as [number, number, number]);
+    for (let t of tokenizers) {
+      [newI, token] = t(i, c);
+      if (token !== Token.Null) {
+        i = newI;
+        tokens.push(token);
         break;
       }
     }
 
-    if (!result) {
-      i++;
-    }
-
     c = program[i];
   }
-  process.stdout.write('\n');
 
-  return ast;
+  return tokens;
 }
+
+const parse = (tokens: Token[]) => {
+  console.log('Parsing tokens');
+  tokens.forEach((t) => process.stdout.write(t));
+};
 
 const load = async (path: string) => {
   const fileContents = await readFile(path, 'utf8');
@@ -95,7 +104,7 @@ const run = async () => {
   }
   const arg = process.argv[2];
   try {
-    interp(parse(await load(arg)));
+    interp(parse(tokenize(await load(arg))));
   } catch(e) {
     console.error('Unable to run program', e);
   }

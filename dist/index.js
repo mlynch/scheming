@@ -161,8 +161,6 @@
                         default:
                             node = makeNode(SyntaxNodeType.Expression, c);
                     }
-                    //stack.pop();
-                    //stack.push(addChildToNode(c, node));
                     stack.push(node);
                     break;
                 }
@@ -190,7 +188,6 @@
                 case TokenType.Operator:
                 case TokenType.Number: {
                     // Concatenate the expression symbol value
-                    if (token.type == TokenType.Number) ;
                     switch (c.type) {
                         case SyntaxNodeType.Constant:
                             c.value = c.value + token.value;

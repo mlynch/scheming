@@ -87,8 +87,6 @@ export const parse = (tokens: Token[]) => {
           default:
             node = makeNode(SyntaxNodeType.Expression, c);
         }
-        //stack.pop();
-        //stack.push(addChildToNode(c, node));
         stack.push(node);
         break;
       } 
@@ -116,9 +114,6 @@ export const parse = (tokens: Token[]) => {
       case TokenType.Operator:
       case TokenType.Number: {
         // Concatenate the expression symbol value
-        if (token.type == TokenType.Number) {
-          //console.log('Token number', c.type, c.value);
-        }
         switch (c.type) {
           case SyntaxNodeType.Constant:
             c.value = c.value + token.value;
@@ -196,8 +191,6 @@ export const parse = (tokens: Token[]) => {
             }
         }
 
-        if (node) {
-        }
         break;
       }
     }

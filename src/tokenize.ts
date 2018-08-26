@@ -21,25 +21,15 @@ export interface Token {
 
 export const NoTokenTypeMatch = [0, { type: TokenType.Null} ] as [number, Token];
 
-export const isWhitespace = (c: string) => {
-  return [' ', '\t', '\n', '\r'].indexOf(c) >= 0;
-}
+export const isWhitespace = (c: string) => [' ', '\t', '\n', '\r'].indexOf(c) >= 0;
 
-export const isOperator = (c: string) => {
-  return ['*', '/', '+', '-'].indexOf(c) >= 0;
-}
+export const isOperator = (c: string) => ['*', '/', '+', '-'].indexOf(c) >= 0;
 
-export const isNumber = (c: string) => {
-  return !isNaN(parseFloat(c));
-}
+export const isNumber = (c: string) => !isNaN(parseFloat(c));
 
-export const isIdentifier = (c: string) => {
-  return /[\w\-]+/.test(c);
-}
+export const isIdentifier = (c: string) => /[\w\-]+/.test(c);
 
-export const isLetter = (c: string) => {
-  return c.toLowerCase() !== c.toUpperCase();
-}
+export const isLetter = (c: string) => c.toLowerCase() !== c.toUpperCase();
 
 const advance = (newTokenType: TokenType, char: string, index: number, amount: number): [number, Token] => {
   return [index + amount, {

@@ -40,21 +40,11 @@
         TokenType["Letter"] = "LETTER";
     })(TokenType || (TokenType = {}));
     const NoTokenTypeMatch = [0, { type: TokenType.Null }];
-    const isWhitespace = (c) => {
-        return [' ', '\t', '\n', '\r'].indexOf(c) >= 0;
-    };
-    const isOperator = (c) => {
-        return ['*', '/', '+', '-'].indexOf(c) >= 0;
-    };
-    const isNumber = (c) => {
-        return !isNaN(parseFloat(c));
-    };
-    const isIdentifier = (c) => {
-        return /[\w\-]+/.test(c);
-    };
-    const isLetter = (c) => {
-        return c.toLowerCase() !== c.toUpperCase();
-    };
+    const isWhitespace = (c) => [' ', '\t', '\n', '\r'].indexOf(c) >= 0;
+    const isOperator = (c) => ['*', '/', '+', '-'].indexOf(c) >= 0;
+    const isNumber = (c) => !isNaN(parseFloat(c));
+    const isIdentifier = (c) => /[\w\-]+/.test(c);
+    const isLetter = (c) => c.toLowerCase() !== c.toUpperCase();
     const advance = (newTokenType, char, index, amount) => {
         return [index + amount, {
                 type: newTokenType,
@@ -272,6 +262,7 @@
         return stack[0];
     };
 
+    // Built-in functions our interpreter understands (such as arithmetic)
     const builtins = {
         '*': (node, context) => {
             const values = node.children.map(n => _eval(n, context));
@@ -286,9 +277,9 @@
             parent
         };
     };
+    // Store a variable in the given context
     const assign = (tree, context) => {
         const a = (name, node) => {
-            //console.log('ASSIGN', name, node.type);
             context.defns[name] = node;
         };
         const first = tree.children[0];
@@ -301,6 +292,7 @@
         }
         return tree;
     };
+    // Lookup a variable in the closest context
     const lookup = (node, context) => {
         let scope = context;
         while (scope) {
@@ -332,11 +324,13 @@
         const newContext = makeContext(context, funcArgs);
         return _eval(funcBody, newContext);
     };
+    // Call a function
     const funcCall = (node, context) => {
         const fn = builtins[node.value];
         const value = fn(node, context);
         return value;
     };
+    // Evaluate a program given by the root node of the AST
     const evaluate = (program) => {
         const output = _eval(program, makeContext());
         console.log('>', output);

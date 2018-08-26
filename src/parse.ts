@@ -72,7 +72,6 @@ export const parse = (tokens: Token[]) => {
   const stack = [root];
 
   for (let token of tokens) {
-    // console.log('TOKEN', token.type);
     // Get the current (deepest) node
     const c = peek(stack);
     console.log('Node', c.type, c.value, 'Token:', token.type, token.value);

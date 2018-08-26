@@ -146,7 +146,6 @@
         };
         const stack = [root];
         for (let token of tokens) {
-            // console.log('TOKEN', token.type);
             // Get the current (deepest) node
             const c = peek(stack);
             console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
@@ -278,30 +277,55 @@
         return stack[0];
     };
 
-    //
-    // Evaluating - executing a program represented by an Abstract Syntax Tree
-    //
+    const makeContext = (parent = null) => {
+        return {
+            defns: {},
+            parent
+        };
+    };
+    const assign = (tree, context) => {
+        const a = (name, node) => {
+            console.log('ASSIGN', name, node.type);
+            context.defns[name] = node;
+        };
+        const first = tree.children[0];
+        switch (first.type) {
+            case SyntaxNodeType.Function: {
+                const name = first.children[0].value;
+                a(name, first);
+                break;
+            }
+        }
+        return tree;
+    };
     const evaluate = (program) => {
-        const output = _eval(program);
+        const output = _eval(program, makeContext());
         console.log('>', output);
     };
-    const _eval = (node) => {
+    const _eval = (node, context) => {
         console.log('Evaluating', node.type, node.value);
         switch (node.type) {
             case SyntaxNodeType.Constant:
                 return node.value;
+            case SyntaxNodeType.Definition:
+                return assign(node, context);
             case SyntaxNodeType.Expression: {
+                switch (node.value) {
+                    case 'define':
+                        return assign(node, context);
+                }
                 let value;
                 for (let child of node.children) {
                     // Not right
-                    value = _eval(child);
+                    value = _eval(child, makeContext(context));
                 }
                 return value;
             }
+            case SyntaxNodeType.Function:
             case SyntaxNodeType.Program: {
                 let value;
                 for (let child of node.children) {
-                    value = _eval(child);
+                    value = _eval(child, makeContext(context));
                 }
                 return value;
             }

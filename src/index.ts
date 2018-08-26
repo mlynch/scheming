@@ -58,7 +58,7 @@ const isNumber = (c: string) => {
 }
 
 const isReference = (c: string) => {
-  return /\w+/.test(c);
+  return /[\w\-\*\/\+]+/.test(c);
 }
 
 const isLetter = (c: string) => {
@@ -137,16 +137,13 @@ const parse = (tokens: Token[]) => {
     // console.log('TOKEN', token.type);
     // Get the current (deepest) node
     const c = peek(stack);
-    console.log('Node', c.type, c.value);
+    console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
     switch (token.type) {
       case TokenType.ParenOpen: {
         let node;
         switch (c.type) {
-          case SyntaxNodeType.Definition:
+          case SyntaxNodeType.Expression:
             node = makeNode(SyntaxNodeType.Function, c);
-            break;
-          case SyntaxNodeType.Function:
-            node = makeNode(SyntaxNodeType.FunctionBody, c);
             break;
           default:
             node = makeNode(SyntaxNodeType.Expression, c);
@@ -157,15 +154,22 @@ const parse = (tokens: Token[]) => {
         break;
       } 
       case TokenType.Letter:
-        if (c.type === SyntaxNodeType.Reference ||
-            c.type === SyntaxNodeType.FunctionName ||
-            c.type === SyntaxNodeType.FunctionParameter) {
-          c.value = c.value + token.value;
+        switch (c.type) {
+          case SyntaxNodeType.Reference:
+          case SyntaxNodeType.FunctionName:
+          case SyntaxNodeType.FunctionParameter:
+          case SyntaxNodeType.FunctionBody: {
+            c.value = c.value + token.value;
+            break;
+          }
+          case SyntaxNodeType.Function: {
+            const node = makeNode(SyntaxNodeType.FunctionName, c, token.value);
+            stack.push(node);
+            break;
+          }
         }
-        if (c.type === SyntaxNodeType.Function) {
-          const node = makeNode(SyntaxNodeType.FunctionName, c, token.value);
-          stack.push(node);
-        }
+        // Fall through
+      case TokenType.Operator:
       case TokenType.Number: {
         // Concatenate the expression symbol value
         if (c.type === SyntaxNodeType.Expression && !c.children.length) {
@@ -174,25 +178,46 @@ const parse = (tokens: Token[]) => {
         break;
       }
       case TokenType.ParenClose:
+        console.log('Paren close', c.type, c.value);
         stack.pop();
-        if (c.type === SyntaxNodeType.FunctionParameter) {
-          stack.pop();
+        switch (c.type) {
+          case SyntaxNodeType.FunctionParameter:
+            stack.pop();
+            break;
+          case SyntaxNodeType.FunctionBody:
+            // Pop function
+            stack.pop();
+            // Pop define
+            //stack.pop();
+            break;
         }
         break;
       case TokenType.Whitespace: {
         // Whitespace delimits expressions
         let node;
-        console.log(`Whitespace hit`, c.type, c.value);
+        console.log(`Whitespace hit`, c.type, c.value, token.value);
+        switch (c.type) {
+          case SyntaxNodeType.Function:
+            node = makeNode(SyntaxNodeType.FunctionBody, c);
+            break;
+          case SyntaxNodeType.FunctionName:
+            node = makeNode(SyntaxNodeType.FunctionParameter, c, '');
+            break;
+          case SyntaxNodeType.FunctionParameter:
+            stack.pop();
+            node = makeNode(SyntaxNodeType.FunctionParameter, peek(stack), '');
 
-        if (c.type === SyntaxNodeType.FunctionName) {
-          node = makeNode(SyntaxNodeType.FunctionParameter, c, '');
-        } else if (isDefineExpr(c)) {
-          node = makeNode(SyntaxNodeType.Definition, c, c.value);
-        } else if (isNumber(c.value)) {
-          node = makeNode(SyntaxNodeType.Number, c, c.value);
-        } else if (isReference(c.value)) {
-          node = makeNode(SyntaxNodeType.Reference, c, c.value);
+            break;
+          default:
+            if (isDefineExpr(c)) {
+              //node = makeNode(SyntaxNodeType.Definition, c, c.value);
+            } else if (isNumber(c.value)) {
+              node = makeNode(SyntaxNodeType.Number, c, c.value);
+            } else if (isReference(c.value)) {
+              node = makeNode(SyntaxNodeType.Reference, c, c.value);
+            }
         }
+
         if (node) {
           stack.push(node);
         }

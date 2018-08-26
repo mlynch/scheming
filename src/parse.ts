@@ -143,6 +143,11 @@ export const parse = (tokens: Token[]) => {
           case SyntaxNodeType.Identifier:
           case SyntaxNodeType.Constant:
             stack.pop();
+            console.log('Popped here', peek(stack).type);
+            if (peek(stack).type === SyntaxNodeType.FunctionBody) {
+              stack.pop();
+              stack.pop();
+            }
             break;
           case SyntaxNodeType.FunctionParameter:
             stack.pop();

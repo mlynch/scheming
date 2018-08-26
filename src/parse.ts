@@ -205,4 +205,6 @@ export const parse = (tokens: Token[]) => {
   console.log(stack.length);
   //printAST(stack[0]);
   printAST(stack[0]);
+
+  return stack[0];
 };

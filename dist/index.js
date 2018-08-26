@@ -25,6 +25,9 @@
         });
     }
 
+    //
+    // Tokenizing - reading a source file and building a stream of tokens to be parsed
+    //
     var TokenType;
     (function (TokenType) {
         TokenType["Unknown"] = "UNKNOWN";
@@ -59,9 +62,6 @@
                 value: char
             }];
     };
-    //
-    // Tokenizing - reading a source file and building a stream of tokens to be parsed
-    //
     const tokenizers = [
         (i, c) => c === '(' ? advance(TokenType.ParenOpen, c, i, 1) : NoTokenTypeMatch,
         (i, c) => c === ')' ? advance(TokenType.ParenClose, c, i, 1) : NoTokenTypeMatch,
@@ -275,12 +275,37 @@
         console.log(stack.length);
         //printAST(stack[0]);
         printAST(stack[0]);
+        return stack[0];
     };
 
     //
     // Evaluating - executing a program represented by an Abstract Syntax Tree
     //
-    const evaluate = (_program) => {
+    const evaluate = (program) => {
+        const output = _eval(program);
+        console.log('>', output);
+    };
+    const _eval = (node) => {
+        console.log('Evaluating', node.type, node.value);
+        switch (node.type) {
+            case SyntaxNodeType.Constant:
+                return node.value;
+            case SyntaxNodeType.Expression: {
+                let value;
+                for (let child of node.children) {
+                    // Not right
+                    value = _eval(child);
+                }
+                return value;
+            }
+            case SyntaxNodeType.Program: {
+                let value;
+                for (let child of node.children) {
+                    value = _eval(child);
+                }
+                return value;
+            }
+        }
     };
 
     const fs = require('fs'), util = require('util');

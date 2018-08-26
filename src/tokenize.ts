@@ -1,3 +1,7 @@
+//
+// Tokenizing - reading a source file and building a stream of tokens to be parsed
+//
+
 export enum TokenType {
   Unknown = 'UNKNOWN',
   Null = 'NULL',
@@ -44,10 +48,6 @@ const advance = (newTokenType: TokenType, char: string, index: number, amount: n
     value: char
   }];
 }
-
-//
-// Tokenizing - reading a source file and building a stream of tokens to be parsed
-//
 
 const tokenizers = [
   (i, c) => c === '('         ? advance(TokenType.ParenOpen,  c, i, 1) : NoTokenTypeMatch,

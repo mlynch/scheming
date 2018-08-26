@@ -18,12 +18,15 @@ enum TokenType {
 enum SyntaxNodeType {
   Program = 'PROGRAM',
   Expression = 'EXPRESSION',
-  Definition = 'DEFINTION',
   Number = 'NUMBER',
   String = 'STRING',
   Reference = 'REFERENCE',
   Function = 'FUNCTION',
-  FunctionDeclaration = 'FUNCTION_DECLARATION',
+  FunctionName = 'FUNCTION_NAME',
+  FunctionParameter = 'FUNCTION_PARAMETER',
+  FunctionBody = 'FUNCTION_BODY',
+  Definition = 'DEFINITION',
+  FunctionInvoke = 'FUNCTION_INVOKE'
 }
 
 
@@ -138,39 +141,52 @@ const parse = (tokens: Token[]) => {
     switch (token.type) {
       case TokenType.ParenOpen: {
         let node;
-        if (c.type === SyntaxNodeType.Definition) {
-          node = makeNode(SyntaxNodeType.Function, c);
-        } else {
-          node = makeNode(SyntaxNodeType.Expression, c);
+        switch (c.type) {
+          case SyntaxNodeType.Definition:
+            node = makeNode(SyntaxNodeType.Function, c);
+            break;
+          case SyntaxNodeType.Function:
+            node = makeNode(SyntaxNodeType.FunctionBody, c);
+            break;
+          default:
+            node = makeNode(SyntaxNodeType.Expression, c);
         }
         //stack.pop();
         //stack.push(addChildToNode(c, node));
-        c.children.push(node);
         stack.push(node);
         break;
       } 
       case TokenType.Letter:
         if (c.type === SyntaxNodeType.Reference ||
-            c.type === SyntaxNodeType.Function) {
+            c.type === SyntaxNodeType.FunctionName ||
+            c.type === SyntaxNodeType.FunctionParameter) {
           c.value = c.value + token.value;
+        }
+        if (c.type === SyntaxNodeType.Function) {
+          const node = makeNode(SyntaxNodeType.FunctionName, c, token.value);
+          stack.push(node);
         }
       case TokenType.Number: {
         // Concatenate the expression symbol value
         if (c.type === SyntaxNodeType.Expression && !c.children.length) {
-          //stack.pop();
-          //stack.push(concatNodeValue(c, token.value));
           c.value = c.value + token.value;
         }
         break;
       }
       case TokenType.ParenClose:
         stack.pop();
+        if (c.type === SyntaxNodeType.FunctionParameter) {
+          stack.pop();
+        }
         break;
       case TokenType.Whitespace: {
         // Whitespace delimits expressions
         let node;
         console.log(`Whitespace hit`, c.type, c.value);
-        if (isDefineExpr(c)) {
+
+        if (c.type === SyntaxNodeType.FunctionName) {
+          node = makeNode(SyntaxNodeType.FunctionParameter, c, '');
+        } else if (isDefineExpr(c)) {
           node = makeNode(SyntaxNodeType.Definition, c, c.value);
         } else if (isNumber(c.value)) {
           node = makeNode(SyntaxNodeType.Number, c, c.value);
@@ -179,8 +195,6 @@ const parse = (tokens: Token[]) => {
         }
         if (node) {
           stack.push(node);
-          c.children.push(node);
-          node.parent = c;
         }
         break;
       }
@@ -194,12 +208,14 @@ const parse = (tokens: Token[]) => {
 
 const makeNode = (type: SyntaxNodeType, parent: SyntaxNode = null, value: string = ''): SyntaxNode => {
   console.log('Making node', type, value);
-  return {
+  const newNode = {
     type,
     value,
     children: [],
     parent
   }
+  parent && parent.children.push(newNode);
+  return newNode;
 }
 
 const concatNodeValue = (node: SyntaxNode, value: string): SyntaxNode => {

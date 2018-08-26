@@ -134,19 +134,24 @@ const parse = (tokens: Token[]) => {
     // console.log('TOKEN', token.type);
     // Get the current (deepest) node
     const c = peek(stack);
-    //console.log('Node', c);
+    console.log('Node', c.type, c.value);
     switch (token.type) {
       case TokenType.ParenOpen: {
-        const node = makeNode(SyntaxNodeType.Expression, c);
+        let node;
+        if (c.type === SyntaxNodeType.Definition) {
+          node = makeNode(SyntaxNodeType.Function, c);
+        } else {
+          node = makeNode(SyntaxNodeType.Expression, c);
+        }
         //stack.pop();
         //stack.push(addChildToNode(c, node));
-        node.parent = c;
         c.children.push(node);
         stack.push(node);
         break;
       } 
       case TokenType.Letter:
-        if (c.type === SyntaxNodeType.Reference) {
+        if (c.type === SyntaxNodeType.Reference ||
+            c.type === SyntaxNodeType.Function) {
           c.value = c.value + token.value;
         }
       case TokenType.Number: {
@@ -164,7 +169,7 @@ const parse = (tokens: Token[]) => {
       case TokenType.Whitespace: {
         // Whitespace delimits expressions
         let node;
-        console.log(`'Whitespace hit`, c.type, c.value);
+        console.log(`Whitespace hit`, c.type, c.value);
         if (isDefineExpr(c)) {
           node = makeNode(SyntaxNodeType.Definition, c, c.value);
         } else if (isNumber(c.value)) {

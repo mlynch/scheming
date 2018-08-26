@@ -282,9 +282,17 @@
         return stack[0];
     };
 
-    const makeContext = (parent = null) => {
+    const builtins = {
+        '*': (node, context) => {
+            const values = node.children.map(n => _eval(n, context));
+            return values.reduce((values, value) => {
+                return value * values;
+            }, 1);
+        }
+    };
+    const makeContext = (parent = null, defns = {}) => {
         return {
-            defns: {},
+            defns,
             parent
         };
     };
@@ -304,6 +312,7 @@
         return tree;
     };
     const lookup = (node, context) => {
+        console.log('LOOKING UP', node.value, context);
         let scope = context;
         while (scope) {
             const val = scope.defns[node.value];
@@ -315,20 +324,45 @@
         }
         return undefined;
     };
+    // Evaluate a function.
+    // First, build up the new context with the mapped parameters to the values
+    // returned from evaluating each function argument.
+    // Then, evaluate the function body using the new context
     const func = (node, context, refNode) => {
         const funcName = node.children[0].value;
-        const funcArgs = refNode.children.slice(1);
-        console.log('EVAL FUNC', funcName, funcArgs);
+        const funcParams = node.children[0].children;
+        const funcBody = node.children[1];
+        const funcArgs = refNode.children.slice(1).map((arg, i) => {
+            return {
+                [funcParams[i].value]: _eval(arg, context)
+            };
+        }).reduce((args, arg) => {
+            const key = Object.keys(arg)[0];
+            args[key] = arg[key];
+            return args;
+        }, {});
+        const newContext = makeContext(context, funcArgs);
+        console.log('EVAL FUNC', funcName, funcArgs, newContext);
+        return _eval(funcBody, newContext);
+    };
+    const funcCall = (node, context) => {
+        const fn = builtins[node.value];
+        console.log('CALL FUNC', node.value, context, fn);
+        const value = fn(node, context);
+        console.log(value);
+        return value;
     };
     const evaluate = (program) => {
         const output = _eval(program, makeContext());
         console.log('>', output);
     };
     const _eval = (node, context, refNode = null) => {
-        console.log('Evaluating', node.type, node.value);
+        console.log('Evaluating', node.type, node.value, context);
         switch (node.type) {
             case SyntaxNodeType.Constant:
-                return node.value;
+                return parseFloat(node.value);
+            case SyntaxNodeType.Identifier:
+                return lookup(node, context);
             case SyntaxNodeType.Definition:
                 return assign(node, context);
             case SyntaxNodeType.Expression: {
@@ -344,18 +378,14 @@
                         return _eval(found, context, node);
                     }
                 }
-                /*
-               let value;
-               for (let child of node.children) {
-                 // Not right
-                 value = _eval(child, makeContext(context));
-               }
-               return value;
-                 */
             }
             case SyntaxNodeType.Function: {
                 return func(node, makeContext(context), refNode);
             }
+            case SyntaxNodeType.FunctionCall: {
+                return funcCall(node, makeContext(context));
+            }
+            case SyntaxNodeType.FunctionBody:
             case SyntaxNodeType.Program: {
                 let value;
                 for (let child of node.children) {

@@ -27,7 +27,7 @@ const makeContext = (parent: Context = null, defns = {}) : Context => {
 
 const assign = (tree: SyntaxNode, context: Context) => {
   const a = (name, node: SyntaxNode) => {
-    console.log('ASSIGN', name, node.type);
+    //console.log('ASSIGN', name, node.type);
     context.defns[name] = node;
   }
 
@@ -43,12 +43,10 @@ const assign = (tree: SyntaxNode, context: Context) => {
 }
 
 const lookup = (node: SyntaxNode, context: Context) => {
-  console.log('LOOKING UP', node.value, context);
   let scope = context;
   while (scope) {
     const val = scope.defns[node.value];
     if (val) {
-      console.log('LOOKUP', node.value, val.type);
       return val;
     }
     scope = scope.parent;
@@ -63,7 +61,7 @@ const lookup = (node: SyntaxNode, context: Context) => {
 // Then, evaluate the function body using the new context
 const func = (node: SyntaxNode, context: Context, refNode: SyntaxNode) => {
   context; refNode;
-  const funcName = node.children[0].value;
+  //const funcName = node.children[0].value;
   const funcParams = node.children[0].children;
   const funcBody = node.children[1];
   const funcArgs = refNode.children.slice(1).map((arg, i) => {
@@ -76,16 +74,13 @@ const func = (node: SyntaxNode, context: Context, refNode: SyntaxNode) => {
     return args;
   }, {});
   const newContext = makeContext(context, funcArgs);
-  console.log('EVAL FUNC', funcName, funcArgs, newContext);
 
   return _eval(funcBody, newContext);
 }
 
 const funcCall = (node: SyntaxNode, context: Context) => {
   const fn = builtins[node.value];
-  console.log('CALL FUNC', node.value, context, fn);
   const value = fn(node, context);
-  console.log(value);
   return value;
 }
 
@@ -96,7 +91,6 @@ export const evaluate = (program: SyntaxNode) => {
 
 
 const _eval = (node: SyntaxNode, context: Context, refNode: SyntaxNode = null) => {
-  console.log('Evaluating', node.type, node.value, context);
   switch (node.type) {
     case SyntaxNodeType.Constant:
       return parseFloat(node.value);

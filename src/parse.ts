@@ -29,7 +29,6 @@ export interface SyntaxNode {
 
 
 const makeNode = (type: SyntaxNodeType, parent: SyntaxNode = null, value: string = ''): SyntaxNode => {
-  console.log('Making node', type, value);
   const newNode = {
     type,
     value,
@@ -74,7 +73,7 @@ export const parse = (tokens: Token[]) => {
   for (let token of tokens) {
     // Get the current (deepest) node
     const c = peek(stack);
-    console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
+    //console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
     switch (token.type) {
       case TokenType.ParenOpen: {
         let node;
@@ -118,7 +117,7 @@ export const parse = (tokens: Token[]) => {
       case TokenType.Number: {
         // Concatenate the expression symbol value
         if (token.type == TokenType.Number) {
-          console.log('Token number', c.type, c.value);
+          //console.log('Token number', c.type, c.value);
         }
         switch (c.type) {
           case SyntaxNodeType.Constant:
@@ -137,13 +136,12 @@ export const parse = (tokens: Token[]) => {
         break;
       }
       case TokenType.ParenClose:
-        console.log('Paren close', c.type, c.value);
+        //console.log('Paren close', c.type, c.value);
         stack.pop();
         switch (c.type) {
           case SyntaxNodeType.Identifier:
           case SyntaxNodeType.Constant:
             stack.pop();
-            console.log('Popped here', peek(stack).type);
             if (peek(stack).type === SyntaxNodeType.FunctionBody) {
               stack.pop();
               stack.pop();
@@ -163,7 +161,6 @@ export const parse = (tokens: Token[]) => {
       case TokenType.Whitespace: {
         // Whitespace delimits expressions
         let node;
-        console.log(`Whitespace hit`, c.type, c.value, token.value);
         switch (c.type) {
           case SyntaxNodeType.Identifier:
           case SyntaxNodeType.Constant:
@@ -206,8 +203,6 @@ export const parse = (tokens: Token[]) => {
     }
   }
 
-  console.log(stack.length);
-  //printAST(stack[0]);
   printAST(stack[0]);
 
   return stack[0];

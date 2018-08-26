@@ -111,7 +111,6 @@
         SyntaxNodeType["FunctionArgument"] = "FUNCTION_ARGUMENT";
     })(SyntaxNodeType || (SyntaxNodeType = {}));
     const makeNode = (type, parent = null, value = '') => {
-        console.log('Making node', type, value);
         const newNode = {
             type,
             value,
@@ -148,7 +147,7 @@
         for (let token of tokens) {
             // Get the current (deepest) node
             const c = peek(stack);
-            console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
+            //console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
             switch (token.type) {
                 case TokenType.ParenOpen: {
                     let node;
@@ -191,9 +190,7 @@
                 case TokenType.Operator:
                 case TokenType.Number: {
                     // Concatenate the expression symbol value
-                    if (token.type == TokenType.Number) {
-                        console.log('Token number', c.type, c.value);
-                    }
+                    if (token.type == TokenType.Number) ;
                     switch (c.type) {
                         case SyntaxNodeType.Constant:
                             c.value = c.value + token.value;
@@ -212,13 +209,12 @@
                     break;
                 }
                 case TokenType.ParenClose:
-                    console.log('Paren close', c.type, c.value);
+                    //console.log('Paren close', c.type, c.value);
                     stack.pop();
                     switch (c.type) {
                         case SyntaxNodeType.Identifier:
                         case SyntaxNodeType.Constant:
                             stack.pop();
-                            console.log('Popped here', peek(stack).type);
                             if (peek(stack).type === SyntaxNodeType.FunctionBody) {
                                 stack.pop();
                                 stack.pop();
@@ -238,7 +234,6 @@
                 case TokenType.Whitespace: {
                     // Whitespace delimits expressions
                     let node;
-                    console.log(`Whitespace hit`, c.type, c.value, token.value);
                     switch (c.type) {
                         case SyntaxNodeType.Identifier:
                         case SyntaxNodeType.Constant:
@@ -276,8 +271,6 @@
                 }
             }
         }
-        console.log(stack.length);
-        //printAST(stack[0]);
         printAST(stack[0]);
         return stack[0];
     };
@@ -298,7 +291,7 @@
     };
     const assign = (tree, context) => {
         const a = (name, node) => {
-            console.log('ASSIGN', name, node.type);
+            //console.log('ASSIGN', name, node.type);
             context.defns[name] = node;
         };
         const first = tree.children[0];
@@ -312,12 +305,10 @@
         return tree;
     };
     const lookup = (node, context) => {
-        console.log('LOOKING UP', node.value, context);
         let scope = context;
         while (scope) {
             const val = scope.defns[node.value];
             if (val) {
-                console.log('LOOKUP', node.value, val.type);
                 return val;
             }
             scope = scope.parent;
@@ -329,7 +320,7 @@
     // returned from evaluating each function argument.
     // Then, evaluate the function body using the new context
     const func = (node, context, refNode) => {
-        const funcName = node.children[0].value;
+        //const funcName = node.children[0].value;
         const funcParams = node.children[0].children;
         const funcBody = node.children[1];
         const funcArgs = refNode.children.slice(1).map((arg, i) => {
@@ -342,14 +333,11 @@
             return args;
         }, {});
         const newContext = makeContext(context, funcArgs);
-        console.log('EVAL FUNC', funcName, funcArgs, newContext);
         return _eval(funcBody, newContext);
     };
     const funcCall = (node, context) => {
         const fn = builtins[node.value];
-        console.log('CALL FUNC', node.value, context, fn);
         const value = fn(node, context);
-        console.log(value);
         return value;
     };
     const evaluate = (program) => {
@@ -357,7 +345,6 @@
         console.log('>', output);
     };
     const _eval = (node, context, refNode = null) => {
-        console.log('Evaluating', node.type, node.value, context);
         switch (node.type) {
             case SyntaxNodeType.Constant:
                 return parseFloat(node.value);

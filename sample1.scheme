@@ -1,1 +1,1 @@
-(define (square x y) (* x y))
+(square 2)

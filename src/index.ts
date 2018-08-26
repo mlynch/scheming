@@ -17,8 +17,8 @@ enum TokenType {
 
 enum SyntaxNodeType {
   Program = 'PROGRAM',
+  Constant = 'CONSTANT',
   Expression = 'EXPRESSION',
-  Number = 'NUMBER',
   String = 'STRING',
   Identifier = 'IDENTIFIER',
   Function = 'FUNCTION',
@@ -181,11 +181,20 @@ const parse = (tokens: Token[]) => {
       case TokenType.Operator:
       case TokenType.Number: {
         // Concatenate the expression symbol value
+        if (token.type == TokenType.Number) {
+          console.log('Token number', c.type, c.value);
+        }
         switch (c.type) {
+          case SyntaxNodeType.Constant:
+            c.value = c.value + token.value;
+            break;
           case SyntaxNodeType.Expression:
           case SyntaxNodeType.FunctionCall:
             if (!c.children.length) {
               c.value = c.value + token.value;
+            } else if(token.type === TokenType.Number) {
+              const node = makeNode(SyntaxNodeType.Constant, c, token.value);
+              stack.push(node);
             }
           break;
         }
@@ -195,6 +204,10 @@ const parse = (tokens: Token[]) => {
         console.log('Paren close', c.type, c.value);
         stack.pop();
         switch (c.type) {
+          case SyntaxNodeType.Identifier:
+          case SyntaxNodeType.Constant:
+            stack.pop();
+            break;
           case SyntaxNodeType.FunctionParameter:
             stack.pop();
             break;
@@ -212,34 +225,40 @@ const parse = (tokens: Token[]) => {
         console.log(`Whitespace hit`, c.type, c.value, token.value);
         switch (c.type) {
           case SyntaxNodeType.Identifier:
+          case SyntaxNodeType.Constant:
             stack.pop();
             break;
           case SyntaxNodeType.Function:
             node = makeNode(SyntaxNodeType.FunctionBody, c);
+            stack.push(node);
             break;
           case SyntaxNodeType.FunctionName:
             node = makeNode(SyntaxNodeType.FunctionParameter, c, '');
+            stack.push(node);
             break;
           case SyntaxNodeType.FunctionParameter:
             stack.pop();
             node = makeNode(SyntaxNodeType.FunctionParameter, peek(stack), '');
+            stack.push(node);
 
             break;
           case SyntaxNodeType.FunctionCall:
             node = makeNode(SyntaxNodeType.Identifier, c, '');
+            stack.push(node);
             break;
           default:
             if (isDefineExpr(c)) {
               //node = makeNode(SyntaxNodeType.Definition, c, c.value);
             } else if (isNumber(c.value)) {
-              node = makeNode(SyntaxNodeType.Number, c, c.value);
+              node = makeNode(SyntaxNodeType.Constant, c, c.value);
             } else if (isIdentifier(c.value)) {
               node = makeNode(SyntaxNodeType.Identifier, c, c.value);
+              stack.push(node);
+              stack.pop();
             }
         }
 
         if (node) {
-          stack.push(node);
         }
         break;
       }

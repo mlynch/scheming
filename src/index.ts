@@ -15,14 +15,22 @@ enum TokenType {
   Letter = 'LETTER',
 }
 
-enum SymbolType {
+enum SyntaxNodeType {
+  Program = 'PROGRAM',
+  Expression = 'EXPRESSION',
+  Definition = 'DEFINTION',
+  Number = 'NUMBER',
+  String = 'STRING',
+  Reference = 'REFERENCE',
   Function = 'FUNCTION',
   FunctionDeclaration = 'FUNCTION_DECLARATION',
 }
 
 
-interface Symbol {
-  type: SymbolType;
+interface SyntaxNode {
+  type: SyntaxNodeType;
+  children: SyntaxNode[];
+  parent: SyntaxNode,
   value: string;
 }
 
@@ -58,8 +66,9 @@ const advance = (newTokenType: TokenType, char: string, index: number, amount: n
   }];
 }
 
-const interp = (_program: any) => {
-};
+//
+// Tokenizing - reading a source file and building a stream of tokens to be parsed
+//
 
 const tokenizers = [
   (i, c) => c === '('         ? advance(TokenType.ParenOpen,  c, i, 1) : NoTokenTypeMatch,
@@ -96,6 +105,10 @@ const tokenize = (program: string) => {
   return tokens;
 }
 
+//
+// Parsing - parsing a stream of tokens and building an Abstract Syntax Tree
+//
+
 const parse = (tokens: Token[]) => {
   // let token = tokens[0];
   /*
@@ -103,7 +116,100 @@ const parse = (tokens: Token[]) => {
   }
    */
   tokens.forEach((t) => process.stdout.write(t.value));
+
+  const root = {
+    type: SyntaxNodeType.Program,
+    children: [],
+    value: ''
+  }
+
+  const stack = [root];
+
+  for (let token of tokens) {
+    // Get the current (deepest) node
+    const c = peek(stack);
+    console.log('Node', c);
+    switch (token.type) {
+      case TokenType.ParenOpen: {
+        const node = makeNode(SyntaxNodeType.Expression, c);
+        stack.pop();
+        stack.push(addChildToNode(c, node));
+        stack.push(node);
+        break;
+      } 
+      case TokenType.ParenClose: {
+        // Expression is finished
+        break;
+      }
+      case TokenType.Letter:
+      case TokenType.Number: {
+        // Concatenate the expression symbol value
+        if (c.type === SyntaxNodeType.Expression) {
+          stack.pop();
+          stack.push(concatNodeValue(c, token.value));
+        }
+        break;
+      }
+      case TokenType.Whitespace: {
+        // Whitespace delimits expressions
+        let node;
+        if (isDefineExpr(c)) {
+          node = makeNode(SyntaxNodeType.Definition, c, c.value);
+        } else if (isNumber(c.value)) {
+          node = makeNode(SyntaxNodeType.Number, c, c.value);
+        } else {
+          node = makeNode(SyntaxNodeType.Reference, c, c.value);
+        }
+        if (node) {
+          stack.pop();
+          stack.push(addChildToNode(c, node));
+          stack.push(node);
+        }
+        break;
+      }
+    }
+  }
+
+  console.log('STACK', stack);
 };
+
+const makeNode = (type: SyntaxNodeType, parent: SyntaxNode = null, value: string = '') => {
+  return {
+    type,
+    value,
+    children: [],
+    parent
+  }
+}
+
+const concatNodeValue = (node: SyntaxNode, value: string) => {
+  return {
+    ...node,
+    value: "" + node.value + value
+  }
+}
+
+const addChildToNode = (node: SyntaxNode, child: SyntaxNode) => {
+  return {
+    ...node,
+    children: [...node.children, child]
+  }
+}
+
+const isDefineExpr = (node: SyntaxNode) => {
+  return node.value === 'define';
+}
+
+const peek = (stack) => stack[stack.length-1];
+
+
+//
+// Evaluating - executing a program represented by an Abstract Syntax Tree
+//
+
+const evaluate = (_program: any) => {
+};
+
 
 const load = async (path: string) => {
   const fileContents = await readFile(path, 'utf8');
@@ -118,7 +224,7 @@ const run = async () => {
   }
   const arg = process.argv[2];
   try {
-    interp(parse(tokenize(await load(arg))));
+    evaluate(parse(tokenize(await load(arg))));
   } catch(e) {
     console.error('Unable to run program', e);
   }

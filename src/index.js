@@ -8,23 +8,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 const fs = require('fs'), util = require('util');
 const readFile = util.promisify(fs.readFile);
-var Token;
-(function (Token) {
-    Token["Unknown"] = "UNKNOWN";
-    Token["Null"] = "NULL";
-    Token["ParenOpen"] = "PAREN_OPEN";
-    Token["ParenClose"] = "PAREN_CLOSE";
-    Token["Whitespace"] = "WHITESPACE";
-    Token["Operator"] = "OPERATOR";
-    Token["Number"] = "NUMBER";
-    Token["Letter"] = "LETTER";
-})(Token || (Token = {}));
+var TokenType;
+(function (TokenType) {
+    TokenType["Unknown"] = "UNKNOWN";
+    TokenType["Null"] = "NULL";
+    TokenType["ParenOpen"] = "PAREN_OPEN";
+    TokenType["ParenClose"] = "PAREN_CLOSE";
+    TokenType["Whitespace"] = "WHITESPACE";
+    TokenType["Operator"] = "OPERATOR";
+    TokenType["Number"] = "NUMBER";
+    TokenType["Letter"] = "LETTER";
+})(TokenType || (TokenType = {}));
 var SymbolType;
 (function (SymbolType) {
     SymbolType["Function"] = "FUNCTION";
     SymbolType["FunctionDeclaration"] = "FUNCTION_DECLARATION";
 })(SymbolType || (SymbolType = {}));
-const NoTokenMatch = [0, Token.Null];
+const NoTokenTypeMatch = [0, { type: TokenType.Null }];
 const isWhitespace = (c) => {
     return [' ', '\t', '\n', '\r'].indexOf(c) >= 0;
 };
@@ -37,31 +37,35 @@ const isNumber = (c) => {
 const isLetter = (c) => {
     return c.toLowerCase() !== c.toUpperCase();
 };
-const advance = (newToken, index, amount) => {
-    return [index + amount, newToken];
+const advance = (newTokenType, char, index, amount) => {
+    return [index + amount, {
+            type: newTokenType,
+            position: index,
+            value: char
+        }];
 };
 const interp = (_program) => {
 };
 const tokenizers = [
-    (i, c) => c === '(' ? advance(Token.ParenOpen, i, 1) : NoTokenMatch,
-    (i, c) => c === ')' ? advance(Token.ParenClose, i, 1) : NoTokenMatch,
-    (i, c) => isWhitespace(c) ? advance(Token.Whitespace, i, 1) : NoTokenMatch,
-    (i, c) => isOperator(c) ? advance(Token.Operator, i, 1) : NoTokenMatch,
-    (i, c) => isLetter(c) ? advance(Token.Letter, i, 1) : NoTokenMatch,
-    (i, c) => isNumber(c) ? advance(Token.Number, i, 1) : NoTokenMatch,
-    (i, _c) => advance(Token.Unknown, i, 1)
+    (i, c) => c === '(' ? advance(TokenType.ParenOpen, c, i, 1) : NoTokenTypeMatch,
+    (i, c) => c === ')' ? advance(TokenType.ParenClose, c, i, 1) : NoTokenTypeMatch,
+    (i, c) => isWhitespace(c) ? advance(TokenType.Whitespace, c, i, 1) : NoTokenTypeMatch,
+    (i, c) => isOperator(c) ? advance(TokenType.Operator, c, i, 1) : NoTokenTypeMatch,
+    (i, c) => isLetter(c) ? advance(TokenType.Letter, c, i, 1) : NoTokenTypeMatch,
+    (i, c) => isNumber(c) ? advance(TokenType.Number, c, i, 1) : NoTokenTypeMatch,
+    (i, c) => advance(TokenType.Unknown, c, i, 1)
 ];
 // Convert a program string into a stream of tokens
 const tokenize = (program) => {
     let i = 0;
     let newI;
-    let token = Token.Null;
+    let token = { type: TokenType.Null };
     let c = program[0];
     const tokens = [];
     while (c) {
         for (let t of tokenizers) {
             [newI, token] = t(i, c);
-            if (token !== Token.Null) {
+            if (token.type !== TokenType.Null) {
                 i = newI;
                 tokens.push(token);
                 break;
@@ -72,8 +76,12 @@ const tokenize = (program) => {
     return tokens;
 };
 const parse = (tokens) => {
-    console.log('Parsing tokens');
-    tokens.forEach((t) => process.stdout.write(t));
+    // let token = tokens[0];
+    /*
+    while (token) {
+    }
+     */
+    tokens.forEach((t) => process.stdout.write(t.value));
 };
 const load = (path) => __awaiter(this, void 0, void 0, function* () {
     const fileContents = yield readFile(path, 'utf8');

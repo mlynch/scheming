@@ -20,13 +20,14 @@ enum SyntaxNodeType {
   Expression = 'EXPRESSION',
   Number = 'NUMBER',
   String = 'STRING',
-  Reference = 'REFERENCE',
+  Identifier = 'IDENTIFIER',
   Function = 'FUNCTION',
   FunctionName = 'FUNCTION_NAME',
   FunctionParameter = 'FUNCTION_PARAMETER',
   FunctionBody = 'FUNCTION_BODY',
   Definition = 'DEFINITION',
-  FunctionInvoke = 'FUNCTION_INVOKE'
+  FunctionCall = 'FUNCTION_CALL',
+  FunctionArgument = 'FUNCTION_ARGUMENT'
 }
 
 
@@ -57,8 +58,8 @@ const isNumber = (c: string) => {
   return !isNaN(parseFloat(c));
 }
 
-const isReference = (c: string) => {
-  return /[\w\-\*\/\+]+/.test(c);
+const isIdentifier = (c: string) => {
+  return /[\w\-]+/.test(c);
 }
 
 const isLetter = (c: string) => {
@@ -145,6 +146,9 @@ const parse = (tokens: Token[]) => {
           case SyntaxNodeType.Expression:
             node = makeNode(SyntaxNodeType.Function, c);
             break;
+          case SyntaxNodeType.FunctionBody:
+            node = makeNode(SyntaxNodeType.FunctionCall, c);
+            break;
           default:
             node = makeNode(SyntaxNodeType.Expression, c);
         }
@@ -155,11 +159,16 @@ const parse = (tokens: Token[]) => {
       } 
       case TokenType.Letter:
         switch (c.type) {
-          case SyntaxNodeType.Reference:
+          case SyntaxNodeType.Identifier:
           case SyntaxNodeType.FunctionName:
           case SyntaxNodeType.FunctionParameter:
           case SyntaxNodeType.FunctionBody: {
             c.value = c.value + token.value;
+            break;
+          }
+          case SyntaxNodeType.FunctionCall: {
+            const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
+            stack.push(node);
             break;
           }
           case SyntaxNodeType.Function: {
@@ -172,8 +181,13 @@ const parse = (tokens: Token[]) => {
       case TokenType.Operator:
       case TokenType.Number: {
         // Concatenate the expression symbol value
-        if (c.type === SyntaxNodeType.Expression && !c.children.length) {
-          c.value = c.value + token.value;
+        switch (c.type) {
+          case SyntaxNodeType.Expression:
+          case SyntaxNodeType.FunctionCall:
+            if (!c.children.length) {
+              c.value = c.value + token.value;
+            }
+          break;
         }
         break;
       }
@@ -197,6 +211,9 @@ const parse = (tokens: Token[]) => {
         let node;
         console.log(`Whitespace hit`, c.type, c.value, token.value);
         switch (c.type) {
+          case SyntaxNodeType.Identifier:
+            stack.pop();
+            break;
           case SyntaxNodeType.Function:
             node = makeNode(SyntaxNodeType.FunctionBody, c);
             break;
@@ -208,13 +225,16 @@ const parse = (tokens: Token[]) => {
             node = makeNode(SyntaxNodeType.FunctionParameter, peek(stack), '');
 
             break;
+          case SyntaxNodeType.FunctionCall:
+            node = makeNode(SyntaxNodeType.Identifier, c, '');
+            break;
           default:
             if (isDefineExpr(c)) {
               //node = makeNode(SyntaxNodeType.Definition, c, c.value);
             } else if (isNumber(c.value)) {
               node = makeNode(SyntaxNodeType.Number, c, c.value);
-            } else if (isReference(c.value)) {
-              node = makeNode(SyntaxNodeType.Reference, c, c.value);
+            } else if (isIdentifier(c.value)) {
+              node = makeNode(SyntaxNodeType.Identifier, c, c.value);
             }
         }
 

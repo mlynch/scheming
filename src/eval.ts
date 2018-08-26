@@ -9,6 +9,7 @@ interface Context {
   parent: Context;
 }
 
+// Built-in functions our interpreter understands (such as arithmetic)
 const builtins = {
   '*': (node: SyntaxNode, context: Context) => {
     const values = node.children.map(n => _eval(n, context));
@@ -25,9 +26,9 @@ const makeContext = (parent: Context = null, defns = {}) : Context => {
   }
 }
 
+// Store a variable in the given context
 const assign = (tree: SyntaxNode, context: Context) => {
   const a = (name, node: SyntaxNode) => {
-    //console.log('ASSIGN', name, node.type);
     context.defns[name] = node;
   }
 
@@ -42,6 +43,7 @@ const assign = (tree: SyntaxNode, context: Context) => {
   return tree;
 }
 
+// Lookup a variable in the closest context
 const lookup = (node: SyntaxNode, context: Context) => {
   let scope = context;
   while (scope) {
@@ -78,12 +80,14 @@ const func = (node: SyntaxNode, context: Context, refNode: SyntaxNode) => {
   return _eval(funcBody, newContext);
 }
 
+// Call a function
 const funcCall = (node: SyntaxNode, context: Context) => {
   const fn = builtins[node.value];
   const value = fn(node, context);
   return value;
 }
 
+// Evaluate a program given by the root node of the AST
 export const evaluate = (program: SyntaxNode) => {
   const output = _eval(program, makeContext());
   console.log('>', output);

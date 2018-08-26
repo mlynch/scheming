@@ -5,11 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node src/index.js"
+    "start": "rollup --config rollup.config.js && node dist/index.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^10.9.2"
+    "@types/node": "^10.9.2",
+    "rollup": "^0.65.0",
+    "rollup-plugin-typescript2": "^0.16.1",
+    "typescript": "^3.0.1"
   }
 }

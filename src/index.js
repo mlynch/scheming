@@ -40,6 +40,9 @@ const isOperator = (c) => {
 const isNumber = (c) => {
     return !isNaN(parseFloat(c));
 };
+const isReference = (c) => {
+    return /\w+/.test(c);
+};
 const isLetter = (c) => {
     return c.toLowerCase() !== c.toUpperCase();
 };
@@ -95,58 +98,69 @@ const parse = (tokens) => {
     const root = {
         type: SyntaxNodeType.Program,
         children: [],
-        value: ''
+        value: '',
+        parent: null
     };
     const stack = [root];
     for (let token of tokens) {
+        // console.log('TOKEN', token.type);
         // Get the current (deepest) node
         const c = peek(stack);
-        console.log('Node', c);
+        //console.log('Node', c);
         switch (token.type) {
             case TokenType.ParenOpen: {
                 const node = makeNode(SyntaxNodeType.Expression, c);
-                stack.pop();
-                stack.push(addChildToNode(c, node));
+                //stack.pop();
+                //stack.push(addChildToNode(c, node));
+                node.parent = c;
+                c.children.push(node);
                 stack.push(node);
                 break;
             }
-            case TokenType.ParenClose: {
-                // Expression is finished
-                break;
-            }
             case TokenType.Letter:
+                if (c.type === SyntaxNodeType.Reference) {
+                    c.value = c.value + token.value;
+                }
             case TokenType.Number: {
                 // Concatenate the expression symbol value
-                if (c.type === SyntaxNodeType.Expression) {
-                    stack.pop();
-                    stack.push(concatNodeValue(c, token.value));
+                if (c.type === SyntaxNodeType.Expression && !c.children.length) {
+                    //stack.pop();
+                    //stack.push(concatNodeValue(c, token.value));
+                    c.value = c.value + token.value;
                 }
                 break;
             }
+            case TokenType.ParenClose:
+                stack.pop();
+                break;
             case TokenType.Whitespace: {
                 // Whitespace delimits expressions
                 let node;
+                console.log(`'Whitespace hit`, c.type, c.value);
                 if (isDefineExpr(c)) {
                     node = makeNode(SyntaxNodeType.Definition, c, c.value);
                 }
                 else if (isNumber(c.value)) {
                     node = makeNode(SyntaxNodeType.Number, c, c.value);
                 }
-                else {
+                else if (isReference(c.value)) {
                     node = makeNode(SyntaxNodeType.Reference, c, c.value);
                 }
                 if (node) {
-                    stack.pop();
-                    stack.push(addChildToNode(c, node));
                     stack.push(node);
+                    c.children.push(node);
+                    node.parent = c;
                 }
                 break;
             }
         }
     }
-    console.log('STACK', stack);
+    console.log(stack.length);
+    //printAST(stack[0]);
+    printAST(stack[0]);
 };
 const makeNode = (type, parent = null, value = '') => {
+    console.log('Making node', type, value);
     return {
         type,
         value,
@@ -164,6 +178,12 @@ const isDefineExpr = (node) => {
     return node.value === 'define';
 };
 const peek = (stack) => stack[stack.length - 1];
+const printAST = (tree, depth = 0) => {
+    console.log(Array(depth).fill(' ').join(''), tree.type, tree.value);
+    for (let node of tree.children) {
+        printAST(node, depth + 1);
+    }
+};
 //
 // Evaluating - executing a program represented by an Abstract Syntax Tree
 //

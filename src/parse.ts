@@ -91,9 +91,36 @@ export const parse = (tokens: Token[]) => {
         stack.push(node);
         break;
       } 
+      case TokenType.ParenClose:
+        //console.log('Paren close', c.type, c.value);
+        stack.pop();
+        switch (c.type) {
+          case SyntaxNodeType.Identifier:
+          case SyntaxNodeType.Operator:
+          case SyntaxNodeType.Constant:
+            stack.pop();
+            if (peek(stack).type === SyntaxNodeType.FunctionBody) {
+              stack.pop();
+              stack.pop();
+            }
+            break;
+          case SyntaxNodeType.FunctionParameter:
+            stack.pop();
+            break;
+          case SyntaxNodeType.FunctionBody:
+            // Pop function
+            stack.pop();
+            // Pop define
+            //stack.pop();
+            break;
+        }
+        break;
       case TokenType.Operator:
+        c.value = c.value + token.value;
+        /*
         const node = makeNode(SyntaxNodeType.Operator, c, token.value);
         stack.push(node);
+        */
         break;
       case TokenType.Letter:
         switch (c.type) {
@@ -114,8 +141,23 @@ export const parse = (tokens: Token[]) => {
             stack.push(node);
             break;
           }
+          case SyntaxNodeType.Expression:
+            c.value = c.value + token.value;
+            break;
+          case SyntaxNodeType.FunctionCall:
+            if (!c.children.length) {
+              c.value = c.value + token.value;
+            } else {
+              const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
+              stack.push(node);
+            }
+            break;
+          case SyntaxNodeType.Operator:
+            const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
+            stack.push(node);
+            break;
         }
-        // Fall through
+        break;
       case TokenType.Number: {
         // Concatenate the expression symbol value
         switch (c.type) {
@@ -144,35 +186,13 @@ export const parse = (tokens: Token[]) => {
         }
         break;
       }
-      case TokenType.ParenClose:
-        //console.log('Paren close', c.type, c.value);
-        stack.pop();
-        switch (c.type) {
-          case SyntaxNodeType.Identifier:
-          case SyntaxNodeType.Constant:
-            stack.pop();
-            if (peek(stack).type === SyntaxNodeType.FunctionBody) {
-              stack.pop();
-              stack.pop();
-            }
-            break;
-          case SyntaxNodeType.FunctionParameter:
-            stack.pop();
-            break;
-          case SyntaxNodeType.FunctionBody:
-            // Pop function
-            stack.pop();
-            // Pop define
-            //stack.pop();
-            break;
-        }
-        break;
       case TokenType.Whitespace: {
         // Whitespace delimits expressions
         let node;
         switch (c.type) {
           case SyntaxNodeType.Identifier:
           case SyntaxNodeType.Constant:
+          case SyntaxNodeType.Operator:
             stack.pop();
             break;
           case SyntaxNodeType.Function:

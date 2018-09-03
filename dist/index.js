@@ -155,9 +155,36 @@
                     stack.push(node);
                     break;
                 }
+                case TokenType.ParenClose:
+                    //console.log('Paren close', c.type, c.value);
+                    stack.pop();
+                    switch (c.type) {
+                        case SyntaxNodeType.Identifier:
+                        case SyntaxNodeType.Operator:
+                        case SyntaxNodeType.Constant:
+                            stack.pop();
+                            if (peek(stack).type === SyntaxNodeType.FunctionBody) {
+                                stack.pop();
+                                stack.pop();
+                            }
+                            break;
+                        case SyntaxNodeType.FunctionParameter:
+                            stack.pop();
+                            break;
+                        case SyntaxNodeType.FunctionBody:
+                            // Pop function
+                            stack.pop();
+                            // Pop define
+                            //stack.pop();
+                            break;
+                    }
+                    break;
                 case TokenType.Operator:
+                    c.value = c.value + token.value;
+                    /*
                     const node = makeNode(SyntaxNodeType.Operator, c, token.value);
                     stack.push(node);
+                    */
                     break;
                 case TokenType.Letter:
                     switch (c.type) {
@@ -178,8 +205,24 @@
                             stack.push(node);
                             break;
                         }
+                        case SyntaxNodeType.Expression:
+                            c.value = c.value + token.value;
+                            break;
+                        case SyntaxNodeType.FunctionCall:
+                            if (!c.children.length) {
+                                c.value = c.value + token.value;
+                            }
+                            else {
+                                const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
+                                stack.push(node);
+                            }
+                            break;
+                        case SyntaxNodeType.Operator:
+                            const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
+                            stack.push(node);
+                            break;
                     }
-                // Fall through
+                    break;
                 case TokenType.Number: {
                     // Concatenate the expression symbol value
                     switch (c.type) {
@@ -209,35 +252,13 @@
                     }
                     break;
                 }
-                case TokenType.ParenClose:
-                    //console.log('Paren close', c.type, c.value);
-                    stack.pop();
-                    switch (c.type) {
-                        case SyntaxNodeType.Identifier:
-                        case SyntaxNodeType.Constant:
-                            stack.pop();
-                            if (peek(stack).type === SyntaxNodeType.FunctionBody) {
-                                stack.pop();
-                                stack.pop();
-                            }
-                            break;
-                        case SyntaxNodeType.FunctionParameter:
-                            stack.pop();
-                            break;
-                        case SyntaxNodeType.FunctionBody:
-                            // Pop function
-                            stack.pop();
-                            // Pop define
-                            //stack.pop();
-                            break;
-                    }
-                    break;
                 case TokenType.Whitespace: {
                     // Whitespace delimits expressions
                     let node;
                     switch (c.type) {
                         case SyntaxNodeType.Identifier:
                         case SyntaxNodeType.Constant:
+                        case SyntaxNodeType.Operator:
                             stack.pop();
                             break;
                         case SyntaxNodeType.Function:
@@ -347,6 +368,7 @@
     // returned from evaluating each function argument.
     // Then, evaluate the function body using the new context
     const func = (node, context, refNode) => {
+        console.log('Func', node, refNode);
         //const funcName = node.children[0].value;
         const funcParams = node.children[0].children;
         const funcBody = node.children[1];
@@ -364,12 +386,7 @@
     };
     // Call a function
     const funcCall = (node, context) => {
-        const fn = builtins[node.value];
-        const value = fn(node, context);
-        return value;
-    };
-    // Call a function
-    const operatorCall = (node, context) => {
+        console.log('Func call', node, node.value);
         const fn = builtins[node.value];
         const value = fn(node, context);
         return value;
@@ -412,11 +429,14 @@
                 return func(node, makeContext(context), refNode);
             }
             case SyntaxNodeType.FunctionCall: {
+                console.log('Function call', node);
                 return funcCall(node, makeContext(context));
             }
+            /*
             case SyntaxNodeType.Operator: {
-                return operatorCall(node, makeContext(context));
+              return operatorCall(node, makeContext(context));
             }
+             */
             case SyntaxNodeType.FunctionBody:
             case SyntaxNodeType.Program: {
                 let value;

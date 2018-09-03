@@ -86,6 +86,7 @@ const lookup = (node: SyntaxNode, context: Context) => {
 // returned from evaluating each function argument.
 // Then, evaluate the function body using the new context
 const func = (node: SyntaxNode, context: Context, refNode: SyntaxNode) => {
+  console.log('Func', node, refNode);
   context; refNode;
   //const funcName = node.children[0].value;
   const funcParams = node.children[0].children;
@@ -106,13 +107,7 @@ const func = (node: SyntaxNode, context: Context, refNode: SyntaxNode) => {
 
 // Call a function
 const funcCall = (node: SyntaxNode, context: Context) => {
-  const fn = builtins[node.value];
-  const value = fn(node, context);
-  return value;
-}
-
-// Call a function
-const operatorCall = (node: SyntaxNode, context: Context) => {
+  console.log('Func call', node, node.value);
   const fn = builtins[node.value];
   const value = fn(node, context);
   return value;
@@ -158,11 +153,14 @@ const _eval = (node: SyntaxNode, context: Context, refNode: SyntaxNode = null) =
       return func(node, makeContext(context), refNode);
     }
     case SyntaxNodeType.FunctionCall: {
+      console.log('Function call', node);
       return funcCall(node, makeContext(context));
     }
+    /*
     case SyntaxNodeType.Operator: {
       return operatorCall(node, makeContext(context));
     }
+     */
     case SyntaxNodeType.FunctionBody:
     case SyntaxNodeType.Program: {
       let value;

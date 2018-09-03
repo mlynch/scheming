@@ -16,7 +16,6 @@ export enum SyntaxNodeType {
   FunctionParameter = 'FUNCTION_PARAMETER',
   FunctionBody = 'FUNCTION_BODY',
   Definition = 'DEFINITION',
-  FunctionCall = 'FUNCTION_CALL',
   FunctionArgument = 'FUNCTION_ARGUMENT'
 }
 
@@ -82,9 +81,6 @@ export const parse = (tokens: Token[]) => {
           case SyntaxNodeType.Expression:
             node = makeNode(SyntaxNodeType.Function, c);
             break;
-          case SyntaxNodeType.FunctionBody:
-            node = makeNode(SyntaxNodeType.FunctionCall, c);
-            break;
           default:
             node = makeNode(SyntaxNodeType.Expression, c);
         }
@@ -127,13 +123,9 @@ export const parse = (tokens: Token[]) => {
           case SyntaxNodeType.Identifier:
           case SyntaxNodeType.FunctionName:
           case SyntaxNodeType.FunctionParameter:
+          case SyntaxNodeType.Expression:
           case SyntaxNodeType.FunctionBody: {
             c.value = c.value + token.value;
-            break;
-          }
-          case SyntaxNodeType.FunctionCall: {
-            const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
-            stack.push(node);
             break;
           }
           case SyntaxNodeType.Function: {
@@ -141,17 +133,6 @@ export const parse = (tokens: Token[]) => {
             stack.push(node);
             break;
           }
-          case SyntaxNodeType.Expression:
-            c.value = c.value + token.value;
-            break;
-          case SyntaxNodeType.FunctionCall:
-            if (!c.children.length) {
-              c.value = c.value + token.value;
-            } else {
-              const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
-              stack.push(node);
-            }
-            break;
           case SyntaxNodeType.Operator:
             const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
             stack.push(node);
@@ -175,14 +156,6 @@ export const parse = (tokens: Token[]) => {
             const node = makeNode(SyntaxNodeType.Constant, c, token.value);
             stack.push(node);
             break;
-          case SyntaxNodeType.FunctionCall:
-            if (!c.children.length) {
-              c.value = c.value + token.value;
-            } else if(token.type === TokenType.Number) {
-              const node = makeNode(SyntaxNodeType.Constant, c, token.value);
-              stack.push(node);
-            }
-          break;
         }
         break;
       }
@@ -191,6 +164,7 @@ export const parse = (tokens: Token[]) => {
         let node;
         switch (c.type) {
           case SyntaxNodeType.Identifier:
+          case SyntaxNodeType.Definition:
           case SyntaxNodeType.Constant:
           case SyntaxNodeType.Operator:
             stack.pop();
@@ -209,20 +183,24 @@ export const parse = (tokens: Token[]) => {
             stack.push(node);
 
             break;
-          case SyntaxNodeType.FunctionCall:
-            node = makeNode(SyntaxNodeType.Identifier, c, '');
-            stack.push(node);
-            break;
-          default:
-            if (isDefineExpr(c)) {
-              //node = makeNode(SyntaxNodeType.Definition, c, c.value);
-            } else if (isNumber(c.value)) {
-              node = makeNode(SyntaxNodeType.Constant, c, c.value);
-            } else if (isIdentifier(c.value)) {
-              node = makeNode(SyntaxNodeType.Identifier, c, c.value);
-              stack.push(node);
+          case SyntaxNodeType.Expression:
+            console.log('WHITESPACE EXPR', c);
+            if (c.children.length == 0) {
+              if (isDefineExpr(c)) {
+                node = makeNode(SyntaxNodeType.Definition, c, '');
+                stack.push(node);
+                stack.pop();
+              } else if (isNumber(c.value)) {
+                node = makeNode(SyntaxNodeType.Constant, c, c.value);
+              } else if (isIdentifier(c.value)) {
+                node = makeNode(SyntaxNodeType.Identifier, c, c.value);
+                stack.push(node);
+                stack.pop();
+              }
+            } else {
               stack.pop();
             }
+            break;
         }
 
         break;

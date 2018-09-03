@@ -98,7 +98,6 @@
         SyntaxNodeType["FunctionParameter"] = "FUNCTION_PARAMETER";
         SyntaxNodeType["FunctionBody"] = "FUNCTION_BODY";
         SyntaxNodeType["Definition"] = "DEFINITION";
-        SyntaxNodeType["FunctionCall"] = "FUNCTION_CALL";
         SyntaxNodeType["FunctionArgument"] = "FUNCTION_ARGUMENT";
     })(SyntaxNodeType || (SyntaxNodeType = {}));
     const makeNode = (type, parent = null, value = '') => {
@@ -146,9 +145,6 @@
                         case SyntaxNodeType.Expression:
                             node = makeNode(SyntaxNodeType.Function, c);
                             break;
-                        case SyntaxNodeType.FunctionBody:
-                            node = makeNode(SyntaxNodeType.FunctionCall, c);
-                            break;
                         default:
                             node = makeNode(SyntaxNodeType.Expression, c);
                     }
@@ -191,13 +187,9 @@
                         case SyntaxNodeType.Identifier:
                         case SyntaxNodeType.FunctionName:
                         case SyntaxNodeType.FunctionParameter:
+                        case SyntaxNodeType.Expression:
                         case SyntaxNodeType.FunctionBody: {
                             c.value = c.value + token.value;
-                            break;
-                        }
-                        case SyntaxNodeType.FunctionCall: {
-                            const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
-                            stack.push(node);
                             break;
                         }
                         case SyntaxNodeType.Function: {
@@ -205,18 +197,6 @@
                             stack.push(node);
                             break;
                         }
-                        case SyntaxNodeType.Expression:
-                            c.value = c.value + token.value;
-                            break;
-                        case SyntaxNodeType.FunctionCall:
-                            if (!c.children.length) {
-                                c.value = c.value + token.value;
-                            }
-                            else {
-                                const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
-                                stack.push(node);
-                            }
-                            break;
                         case SyntaxNodeType.Operator:
                             const node = makeNode(SyntaxNodeType.Identifier, c, token.value);
                             stack.push(node);
@@ -240,15 +220,6 @@
                             const node = makeNode(SyntaxNodeType.Constant, c, token.value);
                             stack.push(node);
                             break;
-                        case SyntaxNodeType.FunctionCall:
-                            if (!c.children.length) {
-                                c.value = c.value + token.value;
-                            }
-                            else if (token.type === TokenType.Number) {
-                                const node = makeNode(SyntaxNodeType.Constant, c, token.value);
-                                stack.push(node);
-                            }
-                            break;
                     }
                     break;
                 }
@@ -257,6 +228,7 @@
                     let node;
                     switch (c.type) {
                         case SyntaxNodeType.Identifier:
+                        case SyntaxNodeType.Definition:
                         case SyntaxNodeType.Constant:
                         case SyntaxNodeType.Operator:
                             stack.pop();
@@ -274,20 +246,27 @@
                             node = makeNode(SyntaxNodeType.FunctionParameter, peek(stack), '');
                             stack.push(node);
                             break;
-                        case SyntaxNodeType.FunctionCall:
-                            node = makeNode(SyntaxNodeType.Identifier, c, '');
-                            stack.push(node);
-                            break;
-                        default:
-                            if (isDefineExpr(c)) ;
-                            else if (isNumber(c.value)) {
-                                node = makeNode(SyntaxNodeType.Constant, c, c.value);
+                        case SyntaxNodeType.Expression:
+                            console.log('WHITESPACE EXPR', c);
+                            if (c.children.length == 0) {
+                                if (isDefineExpr(c)) {
+                                    node = makeNode(SyntaxNodeType.Definition, c, '');
+                                    stack.push(node);
+                                    stack.pop();
+                                }
+                                else if (isNumber(c.value)) {
+                                    node = makeNode(SyntaxNodeType.Constant, c, c.value);
+                                }
+                                else if (isIdentifier(c.value)) {
+                                    node = makeNode(SyntaxNodeType.Identifier, c, c.value);
+                                    stack.push(node);
+                                    stack.pop();
+                                }
                             }
-                            else if (isIdentifier(c.value)) {
-                                node = makeNode(SyntaxNodeType.Identifier, c, c.value);
-                                stack.push(node);
+                            else {
                                 stack.pop();
                             }
+                            break;
                     }
                     break;
                 }
@@ -298,38 +277,40 @@
     };
 
     // Built-in functions our interpreter understands (such as arithmetic)
+    /*
     const builtins = {
-        '*': (node, context) => {
-            const values = node.children.map(n => _eval(n, context));
-            return values.reduce((values, value) => {
-                return value * values;
-            }, 1);
-        },
-        '/': (node, context) => {
-            const values = node.children.map(n => _eval(n, context));
-            return values.reduce((values, value, index) => {
-                if (index == 0) {
-                    return value;
-                }
-                return values / value;
-            }, 0);
-        },
-        '+': (node, context) => {
-            const values = node.children.map(n => _eval(n, context));
-            return values.reduce((values, value) => {
-                return value + values;
-            }, 0);
-        },
-        '-': (node, context) => {
-            let s = 0;
-            for (let i = 0; i < node.children.length; i++) {
-                const n = node.children[i];
-                const value = _eval(n, context);
-                s = s - value;
-            }
-            return s;
+    '*': (node: SyntaxNode, context: Context) => {
+      const values = node.children.map(n => _eval(n, context));
+      return values.reduce((values, value) => {
+        return value * values;
+      }, 1);
+    },
+    '/': (node: SyntaxNode, context: Context) => {
+      const values = node.children.map(n => _eval(n, context));
+      return values.reduce((values, value, index) => {
+        if (index == 0) {
+          return value;
         }
-    };
+        return values / value;
+      }, 0);
+    },
+    '+': (node: SyntaxNode, context: Context) => {
+      const values = node.children.map(n => _eval(n, context));
+      return values.reduce((values, value) => {
+        return value + values;
+      }, 0);
+    },
+    '-': (node: SyntaxNode, context: Context) => {
+      let s = 0;
+      for (let i = 0; i < node.children.length; i++) {
+        const n = node.children[i];
+        const value = _eval(n, context);
+        s = s - value;
+      }
+      return s;
+    }
+    }
+     */
     const makeContext = (parent = null, defns = {}) => {
         return {
             defns,
@@ -385,12 +366,14 @@
         return _eval(funcBody, newContext);
     };
     // Call a function
-    const funcCall = (node, context) => {
-        console.log('Func call', node, node.value);
-        const fn = builtins[node.value];
-        const value = fn(node, context);
-        return value;
-    };
+    /*
+    const funcCall = (node: SyntaxNode, context: Context) => {
+      console.log('Func call', node, node.value);
+      const fn = builtins[node.value];
+      const value = fn(node, context);
+      return value;
+    }
+     */
     // Evaluate a program given by the root node of the AST
     const evaluate = (program) => {
         const output = _eval(program, makeContext());
@@ -400,25 +383,14 @@
         switch (node.type) {
             case SyntaxNodeType.Constant:
                 return parseFloat(node.value);
+            case SyntaxNodeType.Definition:
+                console.log('DEFINE', node);
+                return assign(node, context);
             case SyntaxNodeType.Identifier:
                 return lookup(node, context);
             case SyntaxNodeType.Definition:
                 return assign(node, context);
             case SyntaxNodeType.Expression: {
-                switch (node.value) {
-                    case 'define':
-                        return assign(node, context);
-                    /*
-                    default: {
-                      // Look up variable
-                      const found = lookup(node, context);
-                      if (!found) {
-                        fail(node, `Unknown identifier '${node.value}'`);
-                      }
-                      return _eval(found, context, node);
-                    }
-                    */
-                }
                 let value;
                 for (let child of node.children) {
                     value = _eval(child, context);
@@ -427,10 +399,6 @@
             }
             case SyntaxNodeType.Function: {
                 return func(node, makeContext(context), refNode);
-            }
-            case SyntaxNodeType.FunctionCall: {
-                console.log('Function call', node);
-                return funcCall(node, makeContext(context));
             }
             /*
             case SyntaxNodeType.Operator: {

@@ -10,6 +10,7 @@ interface Context {
 }
 
 // Built-in functions our interpreter understands (such as arithmetic)
+  /*
 const builtins = {
   '*': (node: SyntaxNode, context: Context) => {
     const values = node.children.map(n => _eval(n, context));
@@ -42,6 +43,7 @@ const builtins = {
     return s;
   }
 }
+   */
 
 const makeContext = (parent: Context = null, defns = {}) : Context => {
   return {
@@ -106,12 +108,14 @@ const func = (node: SyntaxNode, context: Context, refNode: SyntaxNode) => {
 }
 
 // Call a function
+/*
 const funcCall = (node: SyntaxNode, context: Context) => {
   console.log('Func call', node, node.value);
   const fn = builtins[node.value];
   const value = fn(node, context);
   return value;
 }
+ */
 
 // Evaluate a program given by the root node of the AST
 export const evaluate = (program: SyntaxNode) => {
@@ -124,25 +128,14 @@ const _eval = (node: SyntaxNode, context: Context, refNode: SyntaxNode = null) =
   switch (node.type) {
     case SyntaxNodeType.Constant:
       return parseFloat(node.value);
+    case SyntaxNodeType.Definition:
+      console.log('DEFINE', node);
+      return assign(node, context);
     case SyntaxNodeType.Identifier:
       return lookup(node, context);
     case SyntaxNodeType.Definition:
       return assign(node, context);
     case SyntaxNodeType.Expression: {
-      switch (node.value) {
-        case 'define':
-          return assign(node, context);
-        /*
-        default: {
-          // Look up variable
-          const found = lookup(node, context);
-          if (!found) {
-            fail(node, `Unknown identifier '${node.value}'`);
-          }
-          return _eval(found, context, node);
-        }
-        */
-      }
       let value;
       for (let child of node.children) {
         value = _eval(child, context);
@@ -151,10 +144,6 @@ const _eval = (node: SyntaxNode, context: Context, refNode: SyntaxNode = null) =
     }
     case SyntaxNodeType.Function: {
       return func(node, makeContext(context), refNode);
-    }
-    case SyntaxNodeType.FunctionCall: {
-      console.log('Function call', node);
-      return funcCall(node, makeContext(context));
     }
     /*
     case SyntaxNodeType.Operator: {

@@ -137,7 +137,7 @@
         for (let token of tokens) {
             // Get the current (deepest) node
             const c = peek(stack);
-            //console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
+            console.log('Node', c.type, c.value, 'Token:', token.type, token.value);
             switch (token.type) {
                 case TokenType.ParenOpen: {
                     let node;
@@ -178,7 +178,14 @@
                 case TokenType.Operator:
                 case TokenType.Number: {
                     // Concatenate the expression symbol value
+                    console.log('NUMBER', c.type);
                     switch (c.type) {
+                        case SyntaxNodeType.Program:
+                            if (token.type === TokenType.Number) {
+                                const node = makeNode(SyntaxNodeType.Constant, c, token.value);
+                                stack.push(node);
+                            }
+                            break;
                         case SyntaxNodeType.Constant:
                             c.value = c.value + token.value;
                             break;

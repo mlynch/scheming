@@ -270,11 +270,29 @@
                 return value * values;
             }, 1);
         },
+        '/': (node, context) => {
+            const values = node.children.map(n => _eval(n, context));
+            return values.reduce((values, value, index) => {
+                if (index == 0) {
+                    return value;
+                }
+                return values / value;
+            }, 0);
+        },
         '+': (node, context) => {
             const values = node.children.map(n => _eval(n, context));
             return values.reduce((values, value) => {
                 return value + values;
             }, 0);
+        },
+        '-': (node, context) => {
+            let s = 0;
+            for (let i = 0; i < node.children.length; i++) {
+                const n = node.children[i];
+                const value = _eval(n, context);
+                s = s - value;
+            }
+            return s;
         }
     };
     const makeContext = (parent = null, defns = {}) => {

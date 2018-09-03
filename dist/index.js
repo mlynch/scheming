@@ -269,6 +269,12 @@
             return values.reduce((values, value) => {
                 return value * values;
             }, 1);
+        },
+        '+': (node, context) => {
+            const values = node.children.map(n => _eval(n, context));
+            return values.reduce((values, value) => {
+                return value + values;
+            }, 0);
         }
     };
     const makeContext = (parent = null, defns = {}) => {

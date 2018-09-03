@@ -8,6 +8,7 @@ export enum SyntaxNodeType {
   Program = 'PROGRAM',
   Constant = 'CONSTANT',
   Expression = 'EXPRESSION',
+  Operator = 'OPERATOR',
   String = 'STRING',
   Identifier = 'IDENTIFIER',
   Function = 'FUNCTION',
@@ -90,6 +91,10 @@ export const parse = (tokens: Token[]) => {
         stack.push(node);
         break;
       } 
+      case TokenType.Operator:
+        const node = makeNode(SyntaxNodeType.Operator, c, token.value);
+        stack.push(node);
+        break;
       case TokenType.Letter:
         switch (c.type) {
           case SyntaxNodeType.Identifier:
@@ -111,7 +116,6 @@ export const parse = (tokens: Token[]) => {
           }
         }
         // Fall through
-      case TokenType.Operator:
       case TokenType.Number: {
         // Concatenate the expression symbol value
         switch (c.type) {
@@ -125,6 +129,10 @@ export const parse = (tokens: Token[]) => {
             c.value = c.value + token.value;
             break;
           case SyntaxNodeType.Expression:
+          case SyntaxNodeType.Operator:
+            const node = makeNode(SyntaxNodeType.Constant, c, token.value);
+            stack.push(node);
+            break;
           case SyntaxNodeType.FunctionCall:
             if (!c.children.length) {
               c.value = c.value + token.value;

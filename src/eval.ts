@@ -111,6 +111,13 @@ const funcCall = (node: SyntaxNode, context: Context) => {
   return value;
 }
 
+// Call a function
+const operatorCall = (node: SyntaxNode, context: Context) => {
+  const fn = builtins[node.value];
+  const value = fn(node, context);
+  return value;
+}
+
 // Evaluate a program given by the root node of the AST
 export const evaluate = (program: SyntaxNode) => {
   const output = _eval(program, makeContext());
@@ -130,6 +137,7 @@ const _eval = (node: SyntaxNode, context: Context, refNode: SyntaxNode = null) =
       switch (node.value) {
         case 'define':
           return assign(node, context);
+        /*
         default: {
           // Look up variable
           const found = lookup(node, context);
@@ -138,13 +146,22 @@ const _eval = (node: SyntaxNode, context: Context, refNode: SyntaxNode = null) =
           }
           return _eval(found, context, node);
         }
+        */
       }
+      let value;
+      for (let child of node.children) {
+        value = _eval(child, context);
+      }
+      return value;
     }
     case SyntaxNodeType.Function: {
       return func(node, makeContext(context), refNode);
     }
     case SyntaxNodeType.FunctionCall: {
       return funcCall(node, makeContext(context));
+    }
+    case SyntaxNodeType.Operator: {
+      return operatorCall(node, makeContext(context));
     }
     case SyntaxNodeType.FunctionBody:
     case SyntaxNodeType.Program: {
@@ -157,7 +174,9 @@ const _eval = (node: SyntaxNode, context: Context, refNode: SyntaxNode = null) =
   }
 }
 
+  /*
 const fail = (node: SyntaxNode, message: string) => {
   node;
   throw new Error(`Error running program: ${message}`);
 }
+   */

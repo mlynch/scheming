@@ -90,6 +90,7 @@
         SyntaxNodeType["Program"] = "PROGRAM";
         SyntaxNodeType["Constant"] = "CONSTANT";
         SyntaxNodeType["Expression"] = "EXPRESSION";
+        SyntaxNodeType["Operator"] = "OPERATOR";
         SyntaxNodeType["String"] = "STRING";
         SyntaxNodeType["Identifier"] = "IDENTIFIER";
         SyntaxNodeType["Function"] = "FUNCTION";
@@ -154,6 +155,10 @@
                     stack.push(node);
                     break;
                 }
+                case TokenType.Operator:
+                    const node = makeNode(SyntaxNodeType.Operator, c, token.value);
+                    stack.push(node);
+                    break;
                 case TokenType.Letter:
                     switch (c.type) {
                         case SyntaxNodeType.Identifier:
@@ -175,10 +180,8 @@
                         }
                     }
                 // Fall through
-                case TokenType.Operator:
                 case TokenType.Number: {
                     // Concatenate the expression symbol value
-                    console.log('NUMBER', c.type);
                     switch (c.type) {
                         case SyntaxNodeType.Program:
                             if (token.type === TokenType.Number) {
@@ -190,6 +193,10 @@
                             c.value = c.value + token.value;
                             break;
                         case SyntaxNodeType.Expression:
+                        case SyntaxNodeType.Operator:
+                            const node = makeNode(SyntaxNodeType.Constant, c, token.value);
+                            stack.push(node);
+                            break;
                         case SyntaxNodeType.FunctionCall:
                             if (!c.children.length) {
                                 c.value = c.value + token.value;
@@ -361,6 +368,12 @@
         const value = fn(node, context);
         return value;
     };
+    // Call a function
+    const operatorCall = (node, context) => {
+        const fn = builtins[node.value];
+        const value = fn(node, context);
+        return value;
+    };
     // Evaluate a program given by the root node of the AST
     const evaluate = (program) => {
         const output = _eval(program, makeContext());
@@ -378,21 +391,31 @@
                 switch (node.value) {
                     case 'define':
                         return assign(node, context);
+                    /*
                     default: {
-                        // Look up variable
-                        const found = lookup(node, context);
-                        if (!found) {
-                            fail(node, `Unknown identifier '${node.value}'`);
-                        }
-                        return _eval(found, context, node);
+                      // Look up variable
+                      const found = lookup(node, context);
+                      if (!found) {
+                        fail(node, `Unknown identifier '${node.value}'`);
+                      }
+                      return _eval(found, context, node);
                     }
+                    */
                 }
+                let value;
+                for (let child of node.children) {
+                    value = _eval(child, context);
+                }
+                return value;
             }
             case SyntaxNodeType.Function: {
                 return func(node, makeContext(context), refNode);
             }
             case SyntaxNodeType.FunctionCall: {
                 return funcCall(node, makeContext(context));
+            }
+            case SyntaxNodeType.Operator: {
+                return operatorCall(node, makeContext(context));
             }
             case SyntaxNodeType.FunctionBody:
             case SyntaxNodeType.Program: {
@@ -404,9 +427,12 @@
             }
         }
     };
-    const fail = (node, message) => {
-        throw new Error(`Error running program: ${message}`);
-    };
+    /*
+    const fail = (node: SyntaxNode, message: string) => {
+    node;
+    throw new Error(`Error running program: ${message}`);
+    }
+     */
 
     const fs = require('fs'), util = require('util');
     const readFile = util.promisify(fs.readFile);
